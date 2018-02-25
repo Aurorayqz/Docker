@@ -45,6 +45,9 @@ namespace docker {
 		container(container_config &config){
 			this->config=config
 		}
-				
+		
+		void start(){
+			auto setup = [](void *)
+		}		
 	};
 }
