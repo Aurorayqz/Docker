@@ -41,13 +41,56 @@ namespace docker {
 		// 容器配置
 		container_config config;
 
+		void start_bash(){
+			// 将 C++ std::string 安全的转换为 C 风格的字符串 char *
+    		// 从 C++14 开始, C++编译器将禁止这种写法 `char *str = "test";`
+    		std::string bash="/bin/bash";
+    		char *c_bash=new char[bash.length()+1];
+    		strcpy(c_bash, bash.c_str());
+
+    		char* const child_args[]={c_bash,NULL};
+    		execv(child_args[0], child_args); // 在子进程中执行 /bin/bash
+    		delete []c_bash;
+		}
+
+		// 设置容器主机名
+		void set_hostname(){
+			sethostname(this->config.host_name.c_str(), this->config.host_name.length());
+		}
+
+		// 设置根目录
+		void set_rootdir(){
+			// chdir 系统调用, 切换到某个目录下
+			chdir(this->config.root_dir.c_str());
+
+			// chrrot 系统调用, 设置根目录, 因为刚才已经切换过当前目录
+    		// 故直接使用当前目录作为根目录即可
+    		chroot(".");
+    		printf("hello world\n");
+		}
+
 	public:
 		container(container_config &config){
-			this->config=config
+			this->config=config;
 		}
 		
 		void start(){
-			auto setup = [](void *)
+			auto setup = [](void *args) -> int{
+				// 对容器进行相关配置
+        		auto _this=reinterpret_cast<container *>(args);
+
+        		_this->set_hostname();
+        		_this->set_rootdir();
+        		_this->start_bash();
+
+        		return proc_wait;
+			};
+			process_pid child_pid=clone(setup,child_stack+STACK_SIZE,
+				CLONE_NEWUTS|	// UTS   namespace
+				SIGCHLD|		// 子进程退出时会发出信号给父进程
+				CLONE_NEWNS,	// Mount namespace
+				this);
+			waitpid(child_pid, nullptr, 0);
 		}		
 	};
 }

@@ -13,6 +13,8 @@ int main(int argc, char const *argv[])
 
     // 配置容器
     // ...
+    config.host_name="aurorayqz_docker";
+    config.root_dir="..";
 
     docker::container container(config);// 根据 config 构造容器
     container.start();// 启动容器
