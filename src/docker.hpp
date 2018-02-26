@@ -69,6 +69,13 @@ namespace docker {
     		printf("hello world\n");
 		}
 
+		// 设置独立的进程空间
+		void set_procsys() {
+		    // 挂载 proc 文件系统
+		    mount("none", "/proc", "proc", 0, nullptr);
+		    mount("none", "/sys", "sysfs", 0, nullptr);
+		}
+
 	public:
 		container(container_config &config){
 			this->config=config;
@@ -81,14 +88,16 @@ namespace docker {
 
         		_this->set_hostname();
         		_this->set_rootdir();
+        		_this->set_procsys();
         		_this->start_bash();
 
         		return proc_wait;
 			};
 			process_pid child_pid=clone(setup,child_stack+STACK_SIZE,
 				CLONE_NEWUTS|	// UTS   namespace
-				SIGCHLD|		// 子进程退出时会发出信号给父进程
-				CLONE_NEWNS,	// Mount namespace
+				CLONE_NEWNS|	// Mount namespace
+				CLONE_NEWPID| // PID   namespace
+				SIGCHLD,		// 子进程退出时会发出信号给父进程
 				this);
 			waitpid(child_pid, nullptr, 0);
 		}		
